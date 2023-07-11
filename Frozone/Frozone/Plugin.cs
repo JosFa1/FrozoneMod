@@ -51,6 +51,27 @@ namespace Frozone
         void Start()
         {
             Utilla.Events.GameInitialized += OnGameInitialized;
+            try
+            {
+                try
+                {
+                    var bundle = LoadAssetBundle("Frozone.Resources.frozoneassets");
+                    var asset = bundle.LoadAsset<GameObject>("Ice");
+                    foreach (var name in bundle.GetAllAssetNames())
+                    {
+                        Console.WriteLine(name);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.Log(e);
+                }
+                icePrefab.SetActive(false);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
         }
 
         public AssetBundle LoadAssetBundle(string path)
@@ -63,7 +84,7 @@ namespace Frozone
 
         void OnEnable()
         {
-            /*HarmonyPatches.ApplyHarmonyPatches();
+            HarmonyPatches.ApplyHarmonyPatches();
             try
             {
                 ice = Instantiate(icePrefab);
@@ -72,7 +93,7 @@ namespace Frozone
             catch (Exception e)
             {
                 Debug.LogException(e);
-            }*/
+            }
         }
 
         void OnDisable()
@@ -147,22 +168,6 @@ namespace Frozone
                     rightTimer -= Time.deltaTime;
                     Debug.Log(rightTimer);
                 }
-            }
-            try
-            {
-                var bundle = LoadAssetBundle("Frozone.Resources.frozoneassets");
-                var asset = bundle.LoadAsset<GameObject>("Ice");
-                icePrefab.SetActive(false);
-                foreach (var name in bundle.GetAllAssetNames())
-                {
-                    Debug.Log("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx");
-                    Console.WriteLine(name);
-                    Debug.Log(name);
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
             }
             leftHandP = Player.Instance.leftControllerTransform.position;
             rightHandP = Player.Instance.rightControllerTransform.position;
