@@ -65,15 +65,6 @@ namespace Frozone
         void OnEnable()
         {
             HarmonyPatches.ApplyHarmonyPatches();
-            try
-            {
-                ice = Instantiate(icePrefab);
-                ice.SetActive(false);
-            }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
-            }
         }
 
         void OnDisable()
@@ -88,13 +79,30 @@ namespace Frozone
         void OnGameInitialized(object sender, EventArgs e)
         {
             /* Code here runs after the game initializes (i.e. GorillaLocomotion.Player.Instance != null) */
-            var bundle = LoadAssetBundle("Frozone.Resources.frozoneassets");
-            foreach (var name in bundle.GetAllAssetNames())
+            try
             {
-                Console.WriteLine(name);
+                Console.WriteLine("On Game Initialized ===========================");
+                var bundle = LoadAssetBundle("Frozone.Resources.frozoneassets");
+                foreach (var name in bundle.GetAllAssetNames())
+                {
+                    Console.WriteLine(name);
+                }
+                icePrefab = bundle.LoadAsset<GameObject>("Ice");
+                icePrefab.SetActive(false);
+                ice = Instantiate(icePrefab);
             }
-            var asset = bundle.LoadAsset<GameObject>("Ice");
-            icePrefab.SetActive(false);
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            try
+            {
+                Stream manifestResourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream($"Frozone.Resources.waterTexA.png");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message+"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx");
+            }
         }
 
         void Update()
