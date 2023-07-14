@@ -51,27 +51,7 @@ namespace Frozone
         void Start()
         {
             Utilla.Events.GameInitialized += OnGameInitialized;
-            try
-            {
-                try
-                {
-                    var bundle = LoadAssetBundle("Frozone.Resources.frozoneassets");
-                    var asset = bundle.LoadAsset<GameObject>("Ice");
-                    foreach (var name in bundle.GetAllAssetNames())
-                    {
-                        Console.WriteLine(name);
-                    }
-                }
-                catch (Exception e)
-                {
-                    Debug.Log(e);
-                }
-                icePrefab.SetActive(false);
-            }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
-            }
+            
         }
 
         public AssetBundle LoadAssetBundle(string path)
@@ -108,6 +88,13 @@ namespace Frozone
         void OnGameInitialized(object sender, EventArgs e)
         {
             /* Code here runs after the game initializes (i.e. GorillaLocomotion.Player.Instance != null) */
+            var bundle = LoadAssetBundle("Frozone.Resources.frozoneassets");
+            foreach (var name in bundle.GetAllAssetNames())
+            {
+                Console.WriteLine(name);
+            }
+            var asset = bundle.LoadAsset<GameObject>("Ice");
+            icePrefab.SetActive(false);
         }
 
         void Update()
