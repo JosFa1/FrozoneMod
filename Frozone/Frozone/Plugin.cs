@@ -34,10 +34,12 @@ namespace Frozone
         public Quaternion leftHandR;
         public Vector3 rightHandP;
         public Quaternion rightHandR;
-        public Quaternion Offset = Quaternion.Euler(-90f, 0f, 90f);
-        public float leftTimer;
-        public float rightTimer;
-        public float coolDown = 1;
+        public Quaternion Offset = Quaternion.Euler(90f, 180f, 0f);
+        public double leftTimer;
+        public double rightTimer;
+        public double coolDown = 0.1;
+        public float playerSpeed;
+        public GameObject Gorilla;
 
         private XRNode leftHandNode = XRNode.LeftHand;
         private XRNode rightHandNode = XRNode.RightHand;
@@ -82,6 +84,10 @@ namespace Frozone
                 }
                 icePrefab = bundle.LoadAsset<GameObject>("ice");
                 icePrefab.SetActive(false);
+
+                icePrefab.AddComponent<GorillaSurfaceOverride>();
+                GorillaSurfaceOverride surfaceOverride = icePrefab.GetComponent<GorillaSurfaceOverride>();
+                surfaceOverride.overrideIndex = 59;
             }
             catch (Exception ex)
             {
@@ -104,8 +110,8 @@ namespace Frozone
                     {
                         leftTimer = coolDown;
                         Debug.Log("Left Pressed, Attempted spawn");
-
-                        GameObject newIce = Instantiate(icePrefab, leftHandP, Quaternion.Euler(leftHandR.eulerAngles + Offset.eulerAngles));
+                        //leftHandR = Quaternion.Euler(leftHandR.eulerAngles + Offset.eulerAngles);
+                        GameObject newIce = Instantiate(icePrefab, leftHandP, leftHandR /*Quaternion.Euler(leftHandR.eulerAngles + Offset.eulerAngles*/);
                         iceInstances.Add(newIce);
                         newIce.SetActive(true);
                     }
@@ -122,8 +128,8 @@ namespace Frozone
                     {
                         rightTimer = coolDown;
                         Debug.Log("Right Pressed, Attempted spawn");
-
-                        GameObject newIce = Instantiate(icePrefab, rightHandP, Quaternion.Euler(rightHandR.eulerAngles + Offset.eulerAngles));
+                        //rightHandR = Quaternion.Euler(rightHandR.eulerAngles + Offset.eulerAngles);
+                        GameObject newIce = Instantiate(icePrefab, rightHandP, rightHandR/*Quaternion.Euler(rightHandR.eulerAngles + Offset.eulerAngles*/);
                         iceInstances.Add(newIce);
                         newIce.SetActive(true);
                     }
@@ -139,11 +145,11 @@ namespace Frozone
 
                 }
             }
-
             leftHandP = Player.Instance.leftControllerTransform.position;
             rightHandP = Player.Instance.rightControllerTransform.position;
             leftHandR = Player.Instance.leftControllerTransform.rotation;
             rightHandR = Player.Instance.rightControllerTransform.rotation;
+            
         }
 
         void DeleteAllIce()
