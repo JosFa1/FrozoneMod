@@ -1,23 +1,20 @@
 ﻿using BepInEx;
 using System;
-using System.Runtime;
 using UnityEngine;
 using UnityEngine.XR;
 using Utilla;
 using GorillaLocomotion;
 using GorillaTag;
 using GorillaExtensions;
-
 using System.IO;
-using System.Text;
 using System.Reflection;
-using System.Collections;
 using System.Collections.Generic;
 using Oculus.Platform.Models;
 using Unity.Mathematics;
 using System.Diagnostics.Contracts;
 using HarmonyLib;
 using GorillaLocomotion.Swimming;
+using Photon.Pun;
 
 namespace Frozone
 {
@@ -26,27 +23,32 @@ namespace Frozone
     [BepInPlugin(PluginInfo.GUID, PluginInfo.Name, PluginInfo.Version)]
     public class Plugin : BaseUnityPlugin
     {
-        bool inRoom;
+        private bool inRoom;
         public GameObject icePrefab;
         public List<GameObject> iceInstances = new List<GameObject>();
-
-        public Vector3 leftHandP;
-        public Quaternion leftHandR;
-        public Vector3 rightHandP;
-        public Quaternion rightHandR;
-        public Quaternion Offset = Quaternion.Euler(90f, 180f, 0f);
-        public double leftTimer;
-        public double rightTimer;
-        public double coolDown = 0.1;
-        public float playerSpeed;
-        public GameObject Gorilla;
-
+        private Vector3 leftHandP;
+        private Quaternion leftHandR;
+        private Vector3 rightHandP;
+        private Quaternion rightHandR;
+        private Quaternion Offset = Quaternion.Euler(90f, 180f, 0f);
+        private double leftTimer;
+        private double rightTimer;
+        private double coolDown = 0.1;
+        private double playerSpeedAverage;
+        private double playerSpeedX;
+        private double playerSpeedY;
+        private double playerSpeedZ;
+        private Vector3 playerSpeedV3;
+        private GameObject Gorilla;
+        private float speedCoolDown = 1;
         private XRNode leftHandNode = XRNode.LeftHand;
         private XRNode rightHandNode = XRNode.RightHand;
-
         private bool isLeftPressed = false;
         private bool isRightPressed = false;
-        public bool primary = false;
+        public bool primaryR = false;
+        public bool primaryL = false;
+        public bool secondaryR = false;
+        public bool admin = false;
 
         void Start()
         {
@@ -55,7 +57,6 @@ namespace Frozone
 
         public AssetBundle LoadAssetBundle(string path)
         {
-
             Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(path);
             AssetBundle bundle = AssetBundle.LoadFromStream(stream);
             stream.Close();
@@ -69,6 +70,7 @@ namespace Frozone
 
         void OnDisable()
         {
+            DeleteAllIce();
             HarmonyPatches.RemoveHarmonyPatches();
         }
 
@@ -84,7 +86,6 @@ namespace Frozone
                 }
                 icePrefab = bundle.LoadAsset<GameObject>("ice");
                 icePrefab.SetActive(false);
-
                 icePrefab.AddComponent<GorillaSurfaceOverride>();
                 GorillaSurfaceOverride surfaceOverride = icePrefab.GetComponent<GorillaSurfaceOverride>();
                 surfaceOverride.overrideIndex = 59;
@@ -93,14 +94,22 @@ namespace Frozone
             {
                 Console.WriteLine(ex.Message);
             }
+            if (PhotonNetwork.LocalPlayer.NickName.ToUpper() == "JOSFA")
+            {
+                admin = true;
+            }
         }
-
 
         void Update()
         {
-            if (inRoom == true)
+            if (inRoom)
             {
-                InputDevices.GetDeviceAtXRNode(rightHandNode).TryGetFeatureValue(CommonUsages.primaryButton, out primary);
+                //InputDevices.GetDeviceAtXRNode(rightHandNode).TryGetFeatureValue(CommonUsages.secondaryButton, out secondaryR);
+                if (admin == true)
+                {
+                    InputDevices.GetDeviceAtXRNode(leftHandNode).TryGetFeatureValue(CommonUsages.primaryButton, out primaryL);
+                }
+                InputDevices.GetDeviceAtXRNode(rightHandNode).TryGetFeatureValue(CommonUsages.primaryButton, out primaryR);
                 InputDevices.GetDeviceAtXRNode(leftHandNode).TryGetFeatureValue(CommonUsages.gripButton, out isLeftPressed);
                 InputDevices.GetDeviceAtXRNode(rightHandNode).TryGetFeatureValue(CommonUsages.gripButton, out isRightPressed);
 
@@ -110,16 +119,18 @@ namespace Frozone
                     {
                         leftTimer = coolDown;
                         Debug.Log("Left Pressed, Attempted spawn");
-                        //leftHandR = Quaternion.Euler(leftHandR.eulerAngles + Offset.eulerAngles);
-                        GameObject newIce = Instantiate(icePrefab, leftHandP, leftHandR /*Quaternion.Euler(leftHandR.eulerAngles + Offset.eulerAngles*/);
+                        GameObject newIce = Instantiate(icePrefab, leftHandP, leftHandR);
                         iceInstances.Add(newIce);
                         newIce.SetActive(true);
                     }
                 }
                 else
                 {
-                    leftTimer -= Time.deltaTime;
-                    Debug.Log(leftTimer);
+                    if (admin)
+                    {
+                        Debug.Log(leftTimer);
+                    }
+                    leftTimer -= (Time.deltaTime * playerSpeedAverage);
                 }
 
                 if (rightTimer <= 0)
@@ -128,40 +139,72 @@ namespace Frozone
                     {
                         rightTimer = coolDown;
                         Debug.Log("Right Pressed, Attempted spawn");
-                        //rightHandR = Quaternion.Euler(rightHandR.eulerAngles + Offset.eulerAngles);
-                        GameObject newIce = Instantiate(icePrefab, rightHandP, rightHandR/*Quaternion.Euler(rightHandR.eulerAngles + Offset.eulerAngles*/);
+                        GameObject newIce = Instantiate(icePrefab, rightHandP, rightHandR);
                         iceInstances.Add(newIce);
                         newIce.SetActive(true);
                     }
                 }
                 else
                 {
-                    rightTimer -= Time.deltaTime;
-                    Debug.Log(rightTimer);
+                    if (admin)
+                    {
+                        Debug.Log(rightTimer);
+                    }
+                    rightTimer -= (Time.deltaTime * playerSpeedAverage);
                 }
-                if (primary)
+                if (primaryR)
                 {
                     DeleteAllIce();
-
+                }
+                /*if (secondaryR)
+                {
+                    Rigidbody targetRigidbody = GorillaLocomotion.Player.Instance.bodyCollider.attachedRigidbody;
+                    Vector3 forwardVector = rightHandR * Vector3.forward;
+                    forwardVector.Normalize();
+                    float forceMagnitude = 5f;
+                    targetRigidbody.AddForce(forwardVector * forceMagnitude);
+                    Debug.Log("Speed boost, applying velocity in direction " + forwardVector);
+                }
+                else
+                {
+                    speedCoolDown -= Time.deltaTime;
+                }*/
+                if (primaryL && admin)
+                {
+                    Debug.Log(playerSpeedAverage);
                 }
             }
+            playerSpeedV3 = GorillaLocomotion.Player.Instance.GetComponent<Rigidbody>().velocity;
             leftHandP = Player.Instance.leftControllerTransform.position;
             rightHandP = Player.Instance.rightControllerTransform.position;
             leftHandR = Player.Instance.leftControllerTransform.rotation;
             rightHandR = Player.Instance.rightControllerTransform.rotation;
-            
+            playerSpeedX = playerSpeedV3.x;
+            playerSpeedY = playerSpeedV3.y;
+            playerSpeedZ = playerSpeedV3.z;
+            playerSpeedAverage = (playerSpeedX * playerSpeedY * playerSpeedZ) / 3;
+            if (playerSpeedAverage < 0)
+            {
+                playerSpeedAverage = playerSpeedAverage * -1;
+            }
+            if (playerSpeedAverage == 0)
+            {
+                playerSpeedAverage = 1;
+            }
         }
 
         void DeleteAllIce()
         {
-            Debug.Log("Destorying Ice");
+            if (admin)
+            {
+                Debug.Log("Destroying Ice");
+            }
             foreach (GameObject iceInstance in iceInstances)
             {
                 Destroy(iceInstance);
             }
             iceInstances.Clear();
         }
-
 
         [ModdedGamemodeJoin]
         public void OnJoin(string gamemode)
