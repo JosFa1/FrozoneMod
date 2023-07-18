@@ -18,19 +18,70 @@ using Photon.Pun;
 
 namespace Frozone
 {
+    public class IceObjectPool
+    {
+        private GameObject icePrefab;
+        private List<GameObject> iceInstances = new List<GameObject>();
+
+        public IceObjectPool(GameObject prefab)
+        {
+            icePrefab = prefab;
+        }
+
+        public GameObject GetIceInstance(Vector3 position, Quaternion rotation)
+        {
+            GameObject iceInstance = null;
+
+            // Check if there is an inactive ice instance in the pool
+            for (int i = 0; i < iceInstances.Count; i++)
+            {
+                if (!iceInstances[i].activeSelf)
+                {
+                    iceInstance = iceInstances[i];
+                    iceInstance.transform.position = position;
+                    iceInstance.transform.rotation = rotation;
+                    iceInstance.SetActive(true);
+                    break;
+                }
+            }
+
+            // If there are no inactive instances, create a new one
+            if (iceInstance == null)
+            {
+                iceInstance = UnityEngine.Object.Instantiate(icePrefab, position, rotation);
+                iceInstances.Add(iceInstance);
+            }
+
+            return iceInstance;
+        }
+
+        public void ReturnIceInstance(GameObject iceInstance)
+        {
+            iceInstance.SetActive(false);
+        }
+
+        public void Clear()
+        {
+            foreach (GameObject iceInstance in iceInstances)
+            {
+                UnityEngine.Object.Destroy(iceInstance);
+            }
+            iceInstances.Clear();
+        }
+    }
+
     [ModdedGamemode]
     [BepInDependency("org.legoandmars.gorillatag.utilla", "1.5.0")]
     [BepInPlugin(PluginInfo.GUID, PluginInfo.Name, PluginInfo.Version)]
     public class Plugin : BaseUnityPlugin
     {
         private bool inRoom;
-        public GameObject icePrefab;
-        public List<GameObject> iceInstances = new List<GameObject>();
+        private IceObjectPool iceObjectPool;
+        private List<GameObject> iceInstances = new List<GameObject>();
         private Vector3 leftHandP;
         private Quaternion leftHandR;
         private Vector3 rightHandP;
         private Quaternion rightHandR;
-        private Quaternion Offset = Quaternion.Euler(90f, 180f, 0f);
         private double leftTimer;
         private double rightTimer;
         private double coolDown = 0.1;
@@ -84,11 +135,14 @@ namespace Frozone
                 {
                     Console.WriteLine(name);
                 }
-                icePrefab = bundle.LoadAsset<GameObject>("ice");
+                GameObject icePrefab = bundle.LoadAsset<GameObject>("ice");
                 icePrefab.SetActive(false);
                 icePrefab.AddComponent<GorillaSurfaceOverride>();
                 GorillaSurfaceOverride surfaceOverride = icePrefab.GetComponent<GorillaSurfaceOverride>();
                 surfaceOverride.overrideIndex = 59;
+
+                // Create the ice object pool
+                iceObjectPool = new IceObjectPool(icePrefab);
             }
             catch (Exception ex)
             {
@@ -119,9 +173,10 @@ namespace Frozone
                     {
                         leftTimer = coolDown;
                         Debug.Log("Left Pressed, Attempted spawn");
-                        GameObject newIce = Instantiate(icePrefab, leftHandP, leftHandR);
+
+                        // Use the object pool to get an ice instance
+                        GameObject newIce = iceObjectPool.GetIceInstance(leftHandP, leftHandR);
                         iceInstances.Add(newIce);
-                        newIce.SetActive(true);
                     }
                 }
                 else
@@ -139,9 +194,10 @@ namespace Frozone
                     {
                         rightTimer = coolDown;
                         Debug.Log("Right Pressed, Attempted spawn");
-                        GameObject newIce = Instantiate(icePrefab, rightHandP, rightHandR);
+
+                        // Use the object pool to get an ice instance
+                        GameObject newIce = iceObjectPool.GetIceInstance(rightHandP, rightHandR);
                         iceInstances.Add(newIce);
-                        newIce.SetActive(true);
                     }
                 }
                 else
@@ -201,7 +257,8 @@ namespace Frozone
             }
             foreach (GameObject iceInstance in iceInstances)
             {
-                Destroy(iceInstance);
+                // Use the object pool to return all ice instances
+                iceObjectPool.ReturnIceInstance(iceInstance);
             }
             iceInstances.Clear();
         }
@@ -219,6 +276,9 @@ namespace Frozone
             Debug.Log("Left Modded Lobby");
             inRoom = false;
             DeleteAllIce();
+
+            // Clear the object pool
+            iceObjectPool.Clear();
         }
     }
 }
