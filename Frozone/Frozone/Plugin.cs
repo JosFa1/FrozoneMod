@@ -160,13 +160,11 @@ namespace Frozone
             {
                 //InputDevices.GetDeviceAtXRNode(rightHandNode).TryGetFeatureValue(CommonUsages.secondaryButton, out secondaryR);
                 if (admin == true)
-                {
-                    InputDevices.GetDeviceAtXRNode(leftHandNode).TryGetFeatureValue(CommonUsages.primaryButton, out primaryL);
-                }
-                InputDevices.GetDeviceAtXRNode(rightHandNode).TryGetFeatureValue(CommonUsages.primaryButton, out primaryR);
-                InputDevices.GetDeviceAtXRNode(leftHandNode).TryGetFeatureValue(CommonUsages.gripButton, out isLeftPressed);
-                InputDevices.GetDeviceAtXRNode(rightHandNode).TryGetFeatureValue(CommonUsages.gripButton, out isRightPressed);
-
+                    primaryL = ControllerInputPoller.instance.leftControllerPrimaryButton;
+                primaryR = ControllerInputPoller.instance.rightControllerPrimaryButton;
+                primaryL = ControllerInputPoller.instance.leftControllerPrimaryButton;
+                isLeftPressed = ControllerInputPoller.instance.leftGrab;
+                isRightPressed = ControllerInputPoller.instance.rightGrab;
                 if (leftTimer <= 0)
                 {
                     if (isLeftPressed)
