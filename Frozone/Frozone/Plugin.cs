@@ -6,6 +6,7 @@ using Utilla;
 using GorillaLocomotion;
 using GorillaTag;
 using GorillaExtensions;
+using System.ComponentModel;
 using System.IO;
 using System.Reflection;
 using System.Collections.Generic;
@@ -70,12 +71,12 @@ namespace Frozone
         }
     }
 
-    [ModdedGamemode]
-    [BepInDependency("org.legoandmars.gorillatag.utilla", "1.5.0")]
+    [Description("HauntedModMenu")]
     [BepInPlugin(PluginInfo.GUID, PluginInfo.Name, PluginInfo.Version)]
     public class Plugin : BaseUnityPlugin
     {
         private bool inRoom;
+        private bool enabled;
         private IceObjectPool iceObjectPool;
         private List<GameObject> iceInstances = new List<GameObject>();
         private Vector3 leftHandP;
@@ -103,7 +104,7 @@ namespace Frozone
 
         void Start()
         {
-            Utilla.Events.GameInitialized += OnGameInitialized;
+            GorillaTagger.OnPlayerSpawned(OnGameInitialized);
         }
 
         public AssetBundle LoadAssetBundle(string path)
@@ -117,16 +118,19 @@ namespace Frozone
         void OnEnable()
         {
             HarmonyPatches.ApplyHarmonyPatches();
+            enabled = true;
         }
 
         void OnDisable()
         {
+            enabled = false;
             DeleteAllIce();
             HarmonyPatches.RemoveHarmonyPatches();
         }
 
-        void OnGameInitialized(object sender, EventArgs e)
+        void OnGameInitialized()
         {
+            NetworkSystem.Instance.OnReturnedToSinglePlayer += () => DeleteAllIce();
             try
             {
                 Console.WriteLine("======================================================");
@@ -156,7 +160,7 @@ namespace Frozone
 
         void Update()
         {
-            if (inRoom)
+            if (NetworkSystem.Instance.InRoom && NetworkSystem.Instance.GameModeString.Contains("MODDED_") && enabled)
             {
                 //InputDevices.GetDeviceAtXRNode(rightHandNode).TryGetFeatureValue(CommonUsages.secondaryButton, out secondaryR);
                 if (admin == true)
@@ -228,11 +232,11 @@ namespace Frozone
                     Debug.Log(playerSpeedAverage);
                 }
             }
-            playerSpeedV3 = GorillaLocomotion.Player.Instance.GetComponent<Rigidbody>().velocity;
-            leftHandP = Player.Instance.leftControllerTransform.position;
-            rightHandP = Player.Instance.rightControllerTransform.position;
-            leftHandR = Player.Instance.leftControllerTransform.rotation;
-            rightHandR = Player.Instance.rightControllerTransform.rotation;
+            playerSpeedV3 = GorillaLocomotion.GTPlayer.Instance.GetComponent<Rigidbody>().velocity;
+            leftHandP = GTPlayer.Instance.leftControllerTransform.position;
+            rightHandP = GTPlayer.Instance.rightControllerTransform.position;
+            leftHandR = GTPlayer.Instance.leftControllerTransform.rotation;
+            rightHandR = GTPlayer.Instance.rightControllerTransform.rotation;
             playerSpeedX = playerSpeedV3.x;
             playerSpeedY = playerSpeedV3.y;
             playerSpeedZ = playerSpeedV3.z;
@@ -259,24 +263,6 @@ namespace Frozone
                 iceObjectPool.ReturnIceInstance(iceInstance);
             }
             iceInstances.Clear();
-        }
-
-        [ModdedGamemodeJoin]
-        public void OnJoin(string gamemode)
-        {
-            Debug.Log("Joined Modded Lobby");
-            inRoom = true;
-        }
-
-        [ModdedGamemodeLeave]
-        public void OnLeave(string gamemode)
-        {
-            Debug.Log("Left Modded Lobby");
-            inRoom = false;
-            DeleteAllIce();
-
-            // Clear the object pool
-            iceObjectPool.Clear();
         }
     }
 }
