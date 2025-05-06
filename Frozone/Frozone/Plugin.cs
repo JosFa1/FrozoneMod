@@ -130,7 +130,11 @@ namespace Frozone
 
         void OnGameInitialized()
         {
-            NetworkSystem.Instance.OnReturnedToSinglePlayer += () => DeleteAllIce();
+            NetworkSystem.Instance.OnReturnedToSinglePlayer += () =>
+            {
+                DeleteAllIce();
+                iceObjectPool.Clear();
+            };
             try
             {
                 Console.WriteLine("======================================================");
